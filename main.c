@@ -189,21 +189,6 @@ int convert_raw_to_mv(gpadc_device src, int value)
  * intergrated in the 'static void prvGPADCTask_POT(void *pvParameters) {}'.
  */
 
-/**
- * @brief GPADC task: We expect to measure an analog value with continuous mode. Both DC and AC
-          values can be measured.
-          input: a possitive signal with range that depends on attenuator (see platform_devices.c)
-          output: Raw value [range between] and measurement at mV 
-
-          Continuous Mode and synchronous reading, 4x oversampling, chopper is not enabled.
-          Hardware interval is set to 100 x 1.024ms = 102.4ms. Another small 
-          "software" interval is used for better readability, but it works without it as well, since 
-          it measures at a slow rate. Enable Delay, GP_ADC_EN_DEL (only at the first execution) 
-          is set to 1: 4x ADC_CLK period. Store Delay, GP_ADC_STORE_DEL (at each execution) is 
-          set to 0: Data is stored after handshake synchronization. Gain, offset and coarse
-          offset calibration are not used. 
-          
- */
 
 /**
  * @brief Template main creates a SysInit task, which creates a Template task
