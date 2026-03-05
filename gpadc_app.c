@@ -17,7 +17,6 @@
 #define CHAN0_DEVICE   ADC_CH0_DEVICE
 #define CHAN1_DEVICE   ADC_CH1_DEVICE
 
-/* For 3.6V attenuation */
 #define OFFLINE_OFFSET_MV_3V6    149.0f
 #define GAIN_ERROR_3V6           0.89f    // measured empirically
 
