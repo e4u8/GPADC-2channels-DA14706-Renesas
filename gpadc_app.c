@@ -17,12 +17,22 @@
 #define CHAN0_DEVICE   ADC_CH0_DEVICE
 #define CHAN1_DEVICE   ADC_CH1_DEVICE
 
+/* For 3.6V attenuation */
+#define OFFLINE_OFFSET_MV_3V6    149.0f
+#define GAIN_ERROR_3V6           0.89f    // measured empirically
+
 
 /*  The hardware configuration happens at main.c inside prvSetupHardware()
  *  because I chose centralized hardware init.
  *  So, this function will be empty!
  */
 void gpadc_app_init(void) {}
+
+/* Calibrates raw measurements of ADC for 3.6V attenuation */
+float correct_mv(uint32_t mv_uncalibrated) {
+    if (mv_uncalibrated < OFFLINE_OFFSET_MV_3V6) return 0.0f;            // subtract fixed offline offset (removes ADC floor)
+    return (mv_uncalibrated - OFFLINE_OFFSET_MV_3V6) / GAIN_ERROR_3V6;   // divide by gain error (corrects the 11% compression)
+}
 
 /* Task moved from main.c (preserves exact logic and delays) */
 void gpadc_app_task(void *pvParameters)
@@ -42,14 +52,16 @@ void gpadc_app_task(void *pvParameters)
         }
         OS_DELAY_MS(1);
         uint16_t dummy = 0 , raw0 = 0;
-        uint32_t mv0 = 0;
+        uint32_t mv0_uncal = 0;
+        float mv0_cal = 0.0f;
         int ret = 0;    // returned value of functions
 
         /* Discard first ADC result after changing mux: the S/H cap can hold previous voltage and the front-end needs time to settle. */
         ad_gpadc_read_nof_conv(h0, 1, &dummy);
         ret = ad_gpadc_read_nof_conv(h0, 1, &raw0);
         if (ret == AD_GPADC_ERROR_NONE) {
-            mv0 = ad_gpadc_conv_to_mvolt(CHAN0_DEVICE->drv, raw0);
+            mv0_uncal = ad_gpadc_conv_to_mvolt(CHAN0_DEVICE->drv, raw0);
+            mv0_cal = correct_mv(mv0_uncal);
         } else {
             printf("[GPADC] read ch0 failed: %d\n", ret);
             fflush(stdout);
@@ -66,12 +78,14 @@ void gpadc_app_task(void *pvParameters)
         }
         //OS_DELAY_MS(1);
         uint16_t raw1 = 0;
-        uint32_t mv1 = 0;
+        uint32_t mv1_uncal = 0;
+        float mv1_cal = 0.0f;
         
         ad_gpadc_read_nof_conv(h1, 1, &dummy);
         ret = ad_gpadc_read_nof_conv(h1, 1, &raw1);
         if (ret == AD_GPADC_ERROR_NONE) {
-            mv1 = ad_gpadc_conv_to_mvolt(CHAN1_DEVICE->drv, raw1);
+            mv1_uncal = ad_gpadc_conv_to_mvolt(CHAN1_DEVICE->drv, raw1);
+            mv1_cal = correct_mv(mv1_uncal);
         } else {
             printf("[GPADC] read ch1 failed: %d\n", ret);
             fflush(stdout);
@@ -82,7 +96,18 @@ void gpadc_app_task(void *pvParameters)
         //uint32_t ms = (uint32_t)((t1 - t0) * portTICK_PERIOD_MS);
         /* Correct, portable printf using inttypes macros */
         //printf("Cycle ms: %" PRIu32 ", ch0: %" PRIu16 " -> %" PRIu32 " mV, ch1: %" PRIu16 " -> %" PRIu32 " mV\n", ms, raw0, mv0, raw1, mv1);
-        printf("%" PRIu16 ",%" PRIu32 ",%" PRIu16 ",%" PRIu32 "\n", raw0, mv0, raw1, mv1);
+
+
+        int mv0_int  = (int)mv0_cal;
+        int mv0_frac = (int)((mv0_cal - mv0_int) * 10);  // 1 decimal place
+        int mv1_int  = (int)mv1_cal;
+        int mv1_frac = (int)((mv1_cal - mv1_int) * 10);
+
+        /* print raw0, uncalibrated_mV, calibrated_mV, raw1, uncalibrated_mV, calibrated_mV*/
+        printf("%" PRIu16 ",%" PRIu32 ",%d.%01d,%" PRIu16 ",%" PRIu32 ",%d.%01d\n",
+               raw0, mv0_uncal, mv0_int, mv0_frac,
+               raw1, mv1_uncal, mv1_int, mv1_frac);
+
         fflush(stdout);
 
         /* keep overall app rate or remove if hardware interval governs */
