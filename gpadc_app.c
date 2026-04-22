@@ -45,7 +45,7 @@ float correct_mv(uint32_t mv_uncalibrated) {
  */
 void gpadc_app_task(void *pvParameters)
 {
-    printf("\n\r***GPADC dual-channel read - Raw, mV ***\n\r\n");
+    //printf("\n\r***GPADC dual-channel read - Raw, mV ***\n\r\n");
 
     /* Buffers declared as static — puts them in RAM rather than the task
      * stack, avoiding stack overflow. */
@@ -54,12 +54,18 @@ void gpadc_app_task(void *pvParameters)
     static float    bufmv0_cal[BUF_SIZE];   // float: correct_mv() returns float
     static float    bufmv1_cal[BUF_SIZE];
     uint16_t idx = 0;
-
     int ret = 0;
     uint16_t dummy = 0;
 
     TickType_t t_start = xTaskGetTickCount();  // for vTaskDelayUntil — do not modify manually
     TickType_t t_batch = xTaskGetTickCount();  // separate reference for batch timing print
+
+    /* --- One-time warmup dummy read for each channel --- */
+    ad_gpadc_handle_t h_warm = ad_gpadc_open(CHAN0_DEVICE);
+    if (h_warm) { ad_gpadc_read_nof_conv(h_warm, 1, &dummy); ad_gpadc_close(h_warm, false); }
+    h_warm = ad_gpadc_open(CHAN1_DEVICE);
+    if (h_warm) { ad_gpadc_read_nof_conv(h_warm, 1, &dummy); ad_gpadc_close(h_warm, false); }
+
 
     for (;;) {
 
@@ -71,15 +77,9 @@ void gpadc_app_task(void *pvParameters)
             vTaskDelayUntil(&t_start, pdMS_TO_TICKS(2));
             continue;
         }
-        /* Discard first result: S/H cap may hold stale voltage after open() */
-        ad_gpadc_read_nof_conv(h0, 1, &dummy);
         ret = ad_gpadc_read_nof_conv(h0, 1, &buf0[idx]);
         if (ret == AD_GPADC_ERROR_NONE) {
-            uint32_t mv0_uncal = ad_gpadc_conv_to_mvolt(CHAN0_DEVICE->drv, buf0[idx]);
-            bufmv0_cal[idx] = correct_mv(mv0_uncal);
-        } else {
-            printf("[GPADC] read ch0 failed: %d\n", ret);
-            fflush(stdout);
+            bufmv0_cal[idx] = correct_mv(ad_gpadc_conv_to_mvolt(CHAN0_DEVICE->drv, buf0[idx]));
         }
         ad_gpadc_close(h0, false);
 
@@ -91,15 +91,9 @@ void gpadc_app_task(void *pvParameters)
             vTaskDelayUntil(&t_start, pdMS_TO_TICKS(2));
             continue;
         }
-        /* Discard first result: S/H cap may hold stale voltage after open() */
-        ad_gpadc_read_nof_conv(h1, 1, &dummy);
         ret = ad_gpadc_read_nof_conv(h1, 1, &buf1[idx]);
         if (ret == AD_GPADC_ERROR_NONE) {
-            uint32_t mv1_uncal = ad_gpadc_conv_to_mvolt(CHAN1_DEVICE->drv, buf1[idx]);
-            bufmv1_cal[idx] = correct_mv(mv1_uncal);
-        } else {
-            printf("[GPADC] read ch1 failed: %d\n", ret);
-            fflush(stdout);
+            bufmv1_cal[idx] = correct_mv(ad_gpadc_conv_to_mvolt(CHAN1_DEVICE->drv, buf1[idx]));
         }
         ad_gpadc_close(h1, false);
 
@@ -108,8 +102,9 @@ void gpadc_app_task(void *pvParameters)
         /* ---- Flush + stats when buffer full ---- */
         if (idx >= BUF_SIZE) {
 
-            /* Measure batch time BEFORE printf — captures only sampling time */
             uint32_t batch_ms = (uint32_t)((xTaskGetTickCount() - t_batch) * portTICK_PERIOD_MS);
+            t_batch = xTaskGetTickCount();  // reset BEFORE printf
+            idx = 0;
 
             /* --- Compute stats for CH0 (calibrated mV) --- */
             float min0 = bufmv0_cal[0], max0 = bufmv0_cal[0];
@@ -149,12 +144,8 @@ void gpadc_app_task(void *pvParameters)
                        buf1[i], (int)bufmv1_cal[i]);
             }
             fflush(stdout);
-
-            idx = 0;
-            t_batch = xTaskGetTickCount();  // reset batch timer AFTER flush
         }
 
-        /* ---- Pace to exactly 2ms per cycle (500 Hz) ---- */
         vTaskDelayUntil(&t_start, pdMS_TO_TICKS(2));
     }
 }
