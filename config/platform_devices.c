@@ -57,12 +57,12 @@ const ad_gpadc_driver_conf_t drv_conf_ch0 = {
         .input_mode             = HW_GPADC_INPUT_MODE_SINGLE_ENDED,
         .positive               = HW_GPADC_INP_P0_5,
         .temp_sensor            = HW_GPADC_NO_TEMP_SENSOR,
-        .sample_time            = 0,      /* multiplier x 8 x ADC_CLK */
+        .sample_time            = 4,      /* multiplier x 8 x ADC_CLK */
         .continuous             = false,
         .interval               = 0,      /* unused if continuous = false */
         .input_attenuator       = HW_GPADC_INPUT_VOLTAGE_UP_TO_3V6,
-        .chopping               = false,
-        .oversampling           = HW_GPADC_OVERSAMPLING_1_SAMPLE,
+        .chopping               = true,
+        .oversampling           = HW_GPADC_OVERSAMPLING_4_SAMPLES,
         .result_mode            = HW_GPADC_RESULT_NORMAL,
 #if HW_GPADC_DMA_SUPPORT
         .dma_setup              = NULL
@@ -73,12 +73,12 @@ const ad_gpadc_driver_conf_t drv_conf_ch1 = {
         .input_mode             = HW_GPADC_INPUT_MODE_SINGLE_ENDED,
         .positive               = HW_GPADC_INP_P0_6,
         .temp_sensor            = HW_GPADC_NO_TEMP_SENSOR,
-        .sample_time            = 0,      /* multiplier x 8 x ADC_CLK */
+        .sample_time            = 4,      /* multiplier x 8 x ADC_CLK */
         .continuous             = false,
         .interval               = 0,      /* unused if continuous = false */
         .input_attenuator       = HW_GPADC_INPUT_VOLTAGE_UP_TO_3V6,
-        .chopping               = false,
-        .oversampling           = HW_GPADC_OVERSAMPLING_1_SAMPLE,
+        .chopping               = true,
+        .oversampling           = HW_GPADC_OVERSAMPLING_4_SAMPLES,
         .result_mode            = HW_GPADC_RESULT_NORMAL,
 #if HW_GPADC_DMA_SUPPORT
         .dma_setup              = NULL

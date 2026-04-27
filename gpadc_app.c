@@ -19,10 +19,15 @@
 #define CHAN1_DEVICE   ADC_CH1_DEVICE
 
 /* Gain and Offset error coefficients for each ADC */
-#define OFFSET_MV_CH0    340.0f         // For P05
-#define GAIN_CH0         0.798f
-#define OFFSET_MV_CH1    170.0f         // For P06
-#define GAIN_CH1         0.845f
+//#define OFFSET_MV_CH0    340.0f         // For P05
+//#define GAIN_CH0         0.798f
+//#define OFFSET_MV_CH1    170.0f         // For P06
+//#define GAIN_CH1         0.845f
+
+#define OFFSET_MV_CH0    0.0f         // For P05
+#define GAIN_CH0         1.0f
+#define OFFSET_MV_CH1    0.0f         // For P06
+#define GAIN_CH1         1.0f
 
 /*  The hardware configuration happens at main.c inside prvSetupHardware()
  *  because I chose centralized hardware init.
